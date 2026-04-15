@@ -7,11 +7,13 @@ import { useSpeechCommands } from "./hooks/useSpeechCommands";
 import { applyCommand, formatTimeLabel, initialDemoState } from "./lib/commandRouter";
 import type { CommandEvent, EventLogEntry, NormalizedCommand } from "./types";
 
+type StatusTone = "good" | "muted" | "warn";
+
 export default function App() {
   const [demoState, setDemoState] = useState(initialDemoState);
   const [eventLog, setEventLog] = useState<EventLogEntry[]>([]);
   const [timerSeconds, setTimerSeconds] = useState(0);
-  const [lastIntent, setLastIntent] = useState("Waiting for the first command");
+  const [lastIntent, setLastIntent] = useState("Awaiting first command");
   const [gestureEnabled, setGestureEnabled] = useState(true);
   const demoStateRef = useRef(initialDemoState);
 
@@ -21,7 +23,7 @@ export default function App() {
     const outcome = applyCommand(demoStateRef.current, event.command, slides.length);
     demoStateRef.current = outcome.nextState;
     setDemoState(outcome.nextState);
-    setLastIntent(`${event.source.toUpperCase()} -> ${event.command}`);
+    setLastIntent(`${event.source.toUpperCase()} · ${event.command}`);
 
     setEventLog((current) => [
       {
@@ -30,7 +32,7 @@ export default function App() {
         timeLabel: formatTimeLabel(event.at)
       },
       ...current
-    ].slice(0, 20));
+    ].slice(0, 16));
   });
 
   const { voiceEnabled, voiceStatus, heardText, lastFinalTranscript, matchedCommandPreview, toggleVoice } = useSpeechCommands({ onCommand });
@@ -39,7 +41,7 @@ export default function App() {
     videoRef,
     onCommand
   });
-  const { motionScore, presenceHint } = usePresenceMonitor({
+  const { motionScore } = usePresenceMonitor({
     enabled: cameraStatus === "ready",
     videoRef,
     onCommand
@@ -63,15 +65,20 @@ export default function App() {
     };
   }, [demoState.isPlaying]);
 
-  const statusCards = useMemo(
+  const statusItems = useMemo(
     () => [
-      { label: "Camera", value: cameraStatus === "ready" ? "Live" : cameraStatus },
-      { label: "Voice", value: voiceStatus },
-      { label: "Gesture", value: detectorStatus },
-      { label: "Presence", value: demoState.presence }
+      { label: "Camera", value: cameraStatus === "ready" ? "Live" : cameraStatus, tone: (cameraStatus === "ready" ? "good" : "muted") as StatusTone },
+      { label: "Voice", value: voiceEnabled ? voiceStatus : "off", tone: (voiceEnabled ? "good" : "muted") as StatusTone },
+      { label: "Gesture", value: gestureEnabled ? detectorStatus : "off", tone: (gestureEnabled ? "good" : "muted") as StatusTone },
+      { label: "Presence", value: demoState.presence, tone: (demoState.presence === "present" ? "good" : "warn") as StatusTone }
     ],
-    [cameraStatus, demoState.presence, detectorStatus, voiceStatus]
+    [cameraStatus, demoState.presence, detectorStatus, gestureEnabled, voiceEnabled, voiceStatus]
   );
+
+  const latestEvent = eventLog[0];
+  const gestureGuide = gestureEnabled
+    ? "Open palm to camera. Keep fingers spread. Move your whole hand left or right about 15-20 cm."
+    : "Turn gesture back on to use open-palm swipe control.";
 
   function dispatchManual(command: NormalizedCommand, detail: string) {
     onCommand({
@@ -85,175 +92,130 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <header className="hero">
-        <div className="hero-copy">
-          <p className="eyebrow">Codex Hackathon Prototype</p>
-          <h1>Touchless meeting control with TensorFlow.js gestures, voice commands, and a reusable command router.</h1>
-          <p className="lede">
-            Browser-first by design so the prototype is realistic on both Windows and macOS, while the reusable multimodal router
-            stays portable across future domains.
-          </p>
+      <header className="topbar">
+        <div className="brand-block">
+          <p className="eyebrow">Codex Hackathon</p>
+          <h1>Touchless Control</h1>
+          <p className="subtitle">A browser-first control surface for voice, gesture, and presence.</p>
         </div>
 
-        <aside className="hero-card">
-          <span className="score-label">Open-Source Stack</span>
-          <strong>React + Vite + TensorFlow.js</strong>
-          <p>Chromium browsers on Windows and macOS for the MVP, with native packaging left for post-hackathon hardening.</p>
-        </aside>
+        <div className="topbar-side">
+          <div className="status-badges">
+            {statusItems.map((item) => (
+              <StatusBadge key={item.label} label={item.label} value={item.value} tone={item.tone} />
+            ))}
+          </div>
+
+          <div className="toggle-row">
+            <button className={`toggle-button ${gestureEnabled ? "active" : ""}`} onClick={() => setGestureEnabled((value) => !value)}>
+              Gesture {gestureEnabled ? "On" : "Off"}
+            </button>
+            <button className={`toggle-button ${voiceEnabled ? "active" : ""}`} onClick={toggleVoice}>
+              Voice {voiceEnabled ? "On" : "Off"}
+            </button>
+          </div>
+        </div>
       </header>
 
-      <section className="status-row">
-        {statusCards.map((card) => (
-          <div className="status-pill" key={card.label}>
-            <span>{card.label}</span>
-            <strong>{card.value}</strong>
-          </div>
-        ))}
-      </section>
-
-      <main className="dashboard">
+      <main className="main-grid">
         <section className="panel live-panel">
-          <div className="panel-head">
-            <div>
-              <p className="panel-label">Live Input</p>
-              <h2>Camera, gestures, and voice</h2>
-            </div>
-            <div className="panel-actions">
-              <button className={`toggle-button ${gestureEnabled ? "active" : ""}`} onClick={() => setGestureEnabled((value) => !value)}>
-                Gesture {gestureEnabled ? "ON" : "OFF"}
-              </button>
-              <button className={`toggle-button ${voiceEnabled ? "active" : ""}`} onClick={toggleVoice}>
-                Voice {voiceEnabled ? "ON" : "OFF"}
-              </button>
-              <button className="ghost-button" onClick={() => dispatchManual("USER_AWAY", "Manual away-state fallback")}>
-                Simulate away-state
-              </button>
-            </div>
+          <div className="panel-bar">
+            <span>Live feed</span>
+            <strong>{lastIntent}</strong>
           </div>
 
-          <div className="video-wrap">
+          <div className="camera-shell">
             <video ref={videoRef} muted playsInline />
-            <div className="video-overlay">
-              <div>
-                <span>Last intent</span>
-                <strong>{lastIntent}</strong>
-              </div>
-              <div>
-                <span>Live voice transcript</span>
+            <div className="camera-banner">
+              <div className="banner-card">
+                <span>Hearing</span>
                 <strong>{heardText}</strong>
               </div>
-            </div>
-          </div>
-
-          <div className="metrics-grid">
-            <MetricCard label="Gesture confidence" value={`${Math.round(gestureConfidence * 100)}%`} />
-            <MetricCard label="Motion score" value={`${Math.round(motionScore * 100)}%`} />
-            <MetricCard label="Timer" value={formatTimer(timerSeconds)} />
-            <MetricCard label="Platform" value="Windows + macOS" />
-          </div>
-
-          <div className="hint-grid">
-            <div className="hint-card">
-              <span>Voice status</span>
-              <strong>{voiceEnabled ? "Voice control enabled" : "Voice control is off until you enable it"}</strong>
-            </div>
-            <div className="hint-card">
-              <span>Last final voice phrase</span>
-              <strong>{lastFinalTranscript}</strong>
-            </div>
-            <div className="hint-card">
-              <span>Matched command</span>
-              <strong>{matchedCommandPreview}</strong>
-            </div>
-            <div className="hint-card">
-              <span>Gesture hint</span>
-              <strong>{gestureHint}</strong>
-            </div>
-            <div className="hint-card">
-              <span>Presence hint</span>
-              <strong>{presenceHint}</strong>
-            </div>
-            {cameraError ? (
-              <div className="hint-card warning">
-                <span>Camera note</span>
-                <strong>{cameraError}</strong>
+              <div className="banner-card">
+                <span>Gesture</span>
+                <strong>{gestureHint}</strong>
               </div>
-            ) : null}
+            </div>
           </div>
 
-          <div className="manual-controls">
-            <button onClick={() => dispatchManual("START", "Manual start fallback")}>Start</button>
-            <button onClick={() => dispatchManual("BACK", "Manual previous fallback")}>Prev</button>
-            <button onClick={() => dispatchManual("NEXT", "Manual next fallback")}>Next</button>
-            <button onClick={() => dispatchManual("TOGGLE_PLAY", "Manual open palm fallback")}>Open Palm</button>
-            <button onClick={() => dispatchManual("MUTE", "Manual mute fallback")}>Mute</button>
-            <button onClick={() => dispatchManual("UNMUTE", "Manual unmute fallback")}>Unmute</button>
+          <div className="gesture-guide">
+            <span>Swipe guide</span>
+            <div className="gesture-guide-steps">
+              <strong>1. Open palm</strong>
+              <strong>2. Shoulder height</strong>
+              <strong>3. Move hand ← or →</strong>
+            </div>
+            <p>{gestureGuide}</p>
           </div>
+
+          <div className="metrics-row">
+            <MetricChip label="Gesture" value={`${Math.round(gestureConfidence * 100)}%`} />
+            <MetricChip label="Motion" value={`${Math.round(motionScore * 100)}%`} />
+            <MetricChip label="Timer" value={formatTimer(timerSeconds)} />
+            <MetricChip label="Platform" value="Win / Mac" />
+          </div>
+
+          <div className="support-row">
+            <InfoCard label="How to swipe" value={gestureGuide} />
+            <InfoCard label="Final phrase" value={lastFinalTranscript} />
+            <InfoCard label="Matched" value={matchedCommandPreview} tone={matchedCommandPreview.includes("No command") ? "muted" : "good"} />
+          </div>
+
+          {cameraError ? <div className="inline-alert">{cameraError}</div> : null}
         </section>
 
-        <section className="panel demo-panel">
-          <div className="panel-head">
-            <div>
-              <p className="panel-label">Demo Workspace</p>
-              <h2>Presentation controller</h2>
-            </div>
-            <div className={`presence-indicator ${demoState.presence}`}>
-              {demoState.presence === "present" ? "User present" : "User away"}
-            </div>
+        <section className="panel stage-panel">
+          <div className="panel-bar">
+            <span>Presentation mode</span>
+            <strong className={`presence-text ${demoState.presence}`}>{demoState.presence}</strong>
           </div>
 
-          <article className="slide-card">
-            <span className="slide-number">
-              Slide {demoState.slideIndex + 1} / {slides.length}
+          <article className="slide-stage">
+            <span className="slide-tag">
+              {demoState.slideIndex + 1} / {slides.length}
             </span>
-            <h3>{slides[demoState.slideIndex].title}</h3>
+            <h2>{slides[demoState.slideIndex].title}</h2>
             <p>{slides[demoState.slideIndex].subtitle}</p>
             <strong>{slides[demoState.slideIndex].accent}</strong>
           </article>
 
-          <div className="demo-stats">
-            <div>
-              <span>Session</span>
-              <strong>{demoState.sessionStarted ? "Started" : "Ready"}</strong>
-            </div>
-            <div>
-              <span>Playback</span>
-              <strong>{demoState.isPlaying ? "Running" : "Paused"}</strong>
-            </div>
-            <div>
-              <span>Audio</span>
-              <strong>{demoState.isMuted ? "Muted" : "Live"}</strong>
-            </div>
+          <div className="stage-stats">
+            <StageStat label="Session" value={demoState.sessionStarted ? "Started" : "Ready"} />
+            <StageStat label="Playback" value={demoState.isPlaying ? "Running" : "Paused"} />
+            <StageStat label="Audio" value={demoState.isMuted ? "Muted" : "Live"} />
+            <StageStat label="Last action" value={demoState.lastActionLabel} wide />
           </div>
 
-          <div className="last-action">
-            <span>Last action</span>
-            <strong>{demoState.lastActionLabel}</strong>
-          </div>
-
-          <div className="pitch-points">
-            <div>
-              <span>Partner impact</span>
-              <p>Hands-free control for meetings today, accessibility and sterile workflows next.</p>
-            </div>
-            <div>
-              <span>Reusable asset</span>
-              <p>The multimodal command router is the reusable platform, not just the meeting UI.</p>
-            </div>
+          <div className="quick-actions">
+            <button onClick={() => dispatchManual("START", "Manual start fallback")}>Start</button>
+            <button onClick={() => dispatchManual("BACK", "Manual previous fallback")}>Prev</button>
+            <button onClick={() => dispatchManual("NEXT", "Manual next fallback")}>Next</button>
+            <button onClick={() => dispatchManual("TOGGLE_PLAY", "Manual open palm fallback")}>Pause</button>
+            <button onClick={() => dispatchManual("MUTE", "Manual mute fallback")}>Mute</button>
+            <button className="ghost-button" onClick={() => dispatchManual("USER_AWAY", "Manual away-state fallback")}>
+              Away
+            </button>
           </div>
         </section>
 
-        <section className="panel log-panel">
-          <div className="panel-head">
-            <div>
-              <p className="panel-label">Evidence Log</p>
-              <h2>Commands and actions</h2>
-            </div>
+        <aside className="panel rail-panel">
+          <div className="panel-bar">
+            <span>Event log</span>
+            <strong>{eventLog.length}</strong>
+          </div>
+
+          <div className="spotlight-card">
+            <span>Latest</span>
+            <strong>
+              {latestEvent
+                ? `${latestEvent.source.toUpperCase()} · ${latestEvent.command} · ${Math.round(latestEvent.confidence * 100)}%`
+                : "No command yet"}
+            </strong>
           </div>
 
           <div className="log-list">
             {eventLog.length === 0 ? (
-              <div className="empty-state">Issue a gesture or voice command to populate the evidence log.</div>
+              <div className="empty-state">Commands will appear here.</div>
             ) : (
               eventLog.map((entry, index) => (
                 <article className="log-item" key={`${entry.timeLabel}-${index}`}>
@@ -264,23 +226,57 @@ export default function App() {
                   </div>
                   <strong>{entry.command}</strong>
                   <p>{entry.action}</p>
-                  <small>{entry.detail}</small>
                 </article>
               ))
             )}
           </div>
-        </section>
+        </aside>
       </main>
     </div>
   );
 }
 
-function MetricCard({ label, value }: { label: string; value: string }) {
+function StatusBadge({
+  label,
+  value,
+  tone
+}: {
+  label: string;
+  value: string;
+  tone: StatusTone;
+}) {
   return (
-    <div className="metric-card">
+    <article className={`status-badge ${tone}`}>
       <span>{label}</span>
       <strong>{value}</strong>
-    </div>
+    </article>
+  );
+}
+
+function MetricChip({ label, value }: { label: string; value: string }) {
+  return (
+    <article className="metric-chip">
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </article>
+  );
+}
+
+function InfoCard({ label, value, tone = "neutral" }: { label: string; value: string; tone?: "neutral" | "good" | "muted" }) {
+  return (
+    <article className={`info-card ${tone}`}>
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </article>
+  );
+}
+
+function StageStat({ label, value, wide = false }: { label: string; value: string; wide?: boolean }) {
+  return (
+    <article className={`stage-stat ${wide ? "wide" : ""}`}>
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </article>
   );
 }
 
