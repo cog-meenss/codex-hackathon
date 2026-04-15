@@ -1,0 +1,4 @@
+interface:
+  display_name: "Hackathon Pitch Packager"
+  short_description: "Turn a prototype into a judging-ready story."
+  default_prompt: "Use $hackathon-pitch-packager to map this prototype to judging criteria and a live demo narrative."

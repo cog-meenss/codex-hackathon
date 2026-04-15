@@ -1,0 +1,4 @@
+interface:
+  display_name: "Multimodal Router Builder"
+  short_description: "Build gesture, voice, and vision command apps."
+  default_prompt: "Use $multimodal-router-builder to scaffold a browser-based multimodal control prototype."
