@@ -21,16 +21,44 @@ export function useHandGestures({ enabled, videoRef, onCommand }: Options) {
   const trailRef = useRef<TrailPoint[]>([]);
   const lastTriggerAtRef = useRef(0);
   const loopTimerRef = useRef<number | null>(null);
-  const [detectorStatus, setDetectorStatus] = useState<DetectorStatus>("loading");
-  const [gestureHint, setGestureHint] = useState("Loading TensorFlow.js hand detector");
+  const [detectorStatus, setDetectorStatus] = useState<DetectorStatus>("off");
+  const [gestureHint, setGestureHint] = useState("Gesture control is off");
   const [gestureConfidence, setGestureConfidence] = useState(0);
+
+  useEffect(() => {
+    return () => {
+      detectorRef.current?.dispose();
+      detectorRef.current = null;
+      if (loopTimerRef.current) {
+        window.clearTimeout(loopTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
 
-    async function loadDetector() {
+    async function prepareDetector() {
+      if (!enabled) {
+        setDetectorStatus("off");
+        setGestureHint("Gesture control is off");
+        setGestureConfidence(0);
+        trailRef.current = [];
+        if (loopTimerRef.current) {
+          window.clearTimeout(loopTimerRef.current);
+        }
+        return;
+      }
+
+      if (detectorRef.current) {
+        setDetectorStatus("ready");
+        setGestureHint("Show one hand and swipe left, swipe right, or open your palm");
+        return;
+      }
+
       try {
         setDetectorStatus("loading");
+        setGestureHint("Loading TensorFlow.js hand detector");
         await tf.setBackend("webgl");
         await tf.ready();
 
@@ -55,17 +83,18 @@ export function useHandGestures({ enabled, videoRef, onCommand }: Options) {
       }
     }
 
-    loadDetector();
+    void prepareDetector();
 
     return () => {
       cancelled = true;
-      detectorRef.current?.dispose();
-      detectorRef.current = null;
     };
-  }, []);
+  }, [enabled]);
 
   useEffect(() => {
     if (!enabled || detectorStatus !== "ready") {
+      if (loopTimerRef.current) {
+        window.clearTimeout(loopTimerRef.current);
+      }
       return;
     }
 

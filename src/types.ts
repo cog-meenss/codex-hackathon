@@ -23,9 +23,9 @@ export type DemoAction =
   | "MARK_AWAY";
 
 export type PresenceState = "present" | "away";
-export type DetectorStatus = "idle" | "loading" | "ready" | "unsupported" | "error";
+export type DetectorStatus = "off" | "idle" | "loading" | "ready" | "unsupported" | "error";
 export type CameraStatus = "requesting" | "ready" | "error";
-export type VoiceStatus = "listening" | "unsupported" | "error" | "idle";
+export type VoiceStatus = "off" | "listening" | "unsupported" | "error" | "idle";
 
 export type CommandEvent = {
   source: CommandSource;

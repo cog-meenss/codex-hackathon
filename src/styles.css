@@ -147,9 +147,28 @@ button:hover {
   margin-bottom: 1rem;
 }
 
+.panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  justify-content: flex-end;
+}
+
 .panel-head h2 {
   margin: 0.2rem 0 0;
   font-size: 1.35rem;
+}
+
+.toggle-button {
+  background: rgba(238, 245, 255, 0.08);
+  border: 1px solid rgba(238, 245, 255, 0.14);
+  color: #eef5ff;
+}
+
+.toggle-button.active {
+  background: linear-gradient(135deg, #5eead4, #60a5fa);
+  color: #071420;
+  border-color: transparent;
 }
 
 .video-wrap {

@@ -12,6 +12,7 @@ export default function App() {
   const [eventLog, setEventLog] = useState<EventLogEntry[]>([]);
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [lastIntent, setLastIntent] = useState("Waiting for the first command");
+  const [gestureEnabled, setGestureEnabled] = useState(true);
   const demoStateRef = useRef(initialDemoState);
 
   const { videoRef, cameraStatus, cameraError } = useCameraFeed();
@@ -32,9 +33,9 @@ export default function App() {
     ].slice(0, 20));
   });
 
-  const { voiceStatus, lastHeard } = useSpeechCommands({ onCommand });
+  const { voiceEnabled, voiceStatus, heardText, lastFinalTranscript, matchedCommandPreview, toggleVoice } = useSpeechCommands({ onCommand });
   const { detectorStatus, gestureHint, gestureConfidence } = useHandGestures({
-    enabled: cameraStatus === "ready",
+    enabled: cameraStatus === "ready" && gestureEnabled,
     videoRef,
     onCommand
   });
@@ -117,9 +118,17 @@ export default function App() {
               <p className="panel-label">Live Input</p>
               <h2>Camera, gestures, and voice</h2>
             </div>
-            <button className="ghost-button" onClick={() => dispatchManual("USER_AWAY", "Manual away-state fallback")}>
-              Simulate away-state
-            </button>
+            <div className="panel-actions">
+              <button className={`toggle-button ${gestureEnabled ? "active" : ""}`} onClick={() => setGestureEnabled((value) => !value)}>
+                Gesture {gestureEnabled ? "ON" : "OFF"}
+              </button>
+              <button className={`toggle-button ${voiceEnabled ? "active" : ""}`} onClick={toggleVoice}>
+                Voice {voiceEnabled ? "ON" : "OFF"}
+              </button>
+              <button className="ghost-button" onClick={() => dispatchManual("USER_AWAY", "Manual away-state fallback")}>
+                Simulate away-state
+              </button>
+            </div>
           </div>
 
           <div className="video-wrap">
@@ -130,8 +139,8 @@ export default function App() {
                 <strong>{lastIntent}</strong>
               </div>
               <div>
-                <span>Last voice transcript</span>
-                <strong>{lastHeard}</strong>
+                <span>Live voice transcript</span>
+                <strong>{heardText}</strong>
               </div>
             </div>
           </div>
@@ -144,6 +153,18 @@ export default function App() {
           </div>
 
           <div className="hint-grid">
+            <div className="hint-card">
+              <span>Voice status</span>
+              <strong>{voiceEnabled ? "Voice control enabled" : "Voice control is off until you enable it"}</strong>
+            </div>
+            <div className="hint-card">
+              <span>Last final voice phrase</span>
+              <strong>{lastFinalTranscript}</strong>
+            </div>
+            <div className="hint-card">
+              <span>Matched command</span>
+              <strong>{matchedCommandPreview}</strong>
+            </div>
             <div className="hint-card">
               <span>Gesture hint</span>
               <strong>{gestureHint}</strong>
