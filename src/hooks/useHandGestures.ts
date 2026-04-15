@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState, type RefObject } from "react";
 import * as handPoseDetection from "@tensorflow-models/hand-pose-detection";
-import * as tf from "@tensorflow/tfjs";
-import "@tensorflow/tfjs-backend-webgl";
 import { clamp } from "../lib/commandRouter";
 import type { CommandEvent, DetectorStatus, NormalizedCommand } from "../types";
 
@@ -27,6 +25,7 @@ type DetectedPose = DetectedGesture & {
 };
 
 const gestureCooldownMs = 1500;
+const mediapipeSolutionPath = new URL("mediapipe/hands", new URL(import.meta.env.BASE_URL, window.location.href)).toString();
 
 export function useHandGestures({ enabled, videoRef, onCommand }: Options) {
   const detectorRef = useRef<handPoseDetection.HandDetector | null>(null);
@@ -76,12 +75,11 @@ export function useHandGestures({ enabled, videoRef, onCommand }: Options) {
 
       try {
         setDetectorStatus("loading");
-        setGestureHint("Loading hand detector");
-        await tf.setBackend("webgl");
-        await tf.ready();
+        setGestureHint("Loading local hand detector");
 
         const detector = await handPoseDetection.createDetector(handPoseDetection.SupportedModels.MediaPipeHands, {
-          runtime: "tfjs",
+          runtime: "mediapipe",
+          solutionPath: mediapipeSolutionPath,
           modelType: "lite",
           maxHands: 1
         });
@@ -97,7 +95,7 @@ export function useHandGestures({ enabled, videoRef, onCommand }: Options) {
       } catch (error) {
         console.error(error);
         setDetectorStatus("error");
-        setGestureHint("Hand detector could not initialize");
+        setGestureHint("Hand detector could not initialize. Check camera permission and local MediaPipe assets.");
       }
     }
 
