@@ -298,6 +298,19 @@ button:hover {
   color: rgba(245, 251, 255, 0.86);
 }
 
+.gesture-fallback-row {
+  display: grid;
+  gap: 0.6rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 0.85rem;
+}
+
+.gesture-fallback-row .ghost-button {
+  background: rgba(255, 255, 255, 0.1);
+  color: #f5fbff;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
 .metrics-row {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   margin-top: 1rem;
@@ -514,7 +527,8 @@ button:hover {
 
   .camera-banner,
   .toggle-row,
-  .gesture-guide-steps {
+  .gesture-guide-steps,
+  .gesture-fallback-row {
     grid-template-columns: 1fr;
   }
 }

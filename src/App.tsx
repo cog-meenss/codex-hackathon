@@ -23,7 +23,7 @@ export default function App() {
     const outcome = applyCommand(demoStateRef.current, event.command, slides.length);
     demoStateRef.current = outcome.nextState;
     setDemoState(outcome.nextState);
-    setLastIntent(`${event.source.toUpperCase()} · ${event.command}`);
+    setLastIntent(`${event.source.toUpperCase()} - ${event.command}`);
 
     setEventLog((current) => [
       {
@@ -77,12 +77,22 @@ export default function App() {
 
   const latestEvent = eventLog[0];
   const gestureGuide = gestureEnabled
-    ? "Open palm to camera. Keep fingers spread. Move your whole hand left or right about 15-20 cm."
-    : "Turn gesture back on to use open-palm swipe control.";
+    ? "Show 1 finger for previous, 2 fingers for next, or an open palm for pause and resume."
+    : "Turn gesture back on to use finger-count controls.";
 
   function dispatchManual(command: NormalizedCommand, detail: string) {
     onCommand({
       source: "manual",
+      command,
+      confidence: 1,
+      detail,
+      at: Date.now()
+    });
+  }
+
+  function dispatchGestureDemo(command: NormalizedCommand, detail: string) {
+    onCommand({
+      source: "gesture",
       command,
       confidence: 1,
       detail,
@@ -139,24 +149,35 @@ export default function App() {
           </div>
 
           <div className="gesture-guide">
-            <span>Swipe guide</span>
+            <span>Gesture guide</span>
             <div className="gesture-guide-steps">
-              <strong>1. Open palm</strong>
-              <strong>2. Shoulder height</strong>
-              <strong>3. Move hand ← or →</strong>
+              <strong>1 finger = Back</strong>
+              <strong>2 fingers = Next</strong>
+              <strong>Open palm = Pause</strong>
             </div>
             <p>{gestureGuide}</p>
+            <div className="gesture-fallback-row">
+              <button className="ghost-button" onClick={() => dispatchGestureDemo("BACK", "Gesture demo fallback: one finger")}>
+                Demo 1 finger
+              </button>
+              <button className="ghost-button" onClick={() => dispatchGestureDemo("NEXT", "Gesture demo fallback: two fingers")}>
+                Demo 2 fingers
+              </button>
+              <button className="ghost-button" onClick={() => dispatchGestureDemo("TOGGLE_PLAY", "Gesture demo fallback: open palm")}>
+                Demo palm
+              </button>
+            </div>
           </div>
 
           <div className="metrics-row">
-            <MetricChip label="Gesture" value={`${Math.round(gestureConfidence * 100)}%`} />
-            <MetricChip label="Motion" value={`${Math.round(motionScore * 100)}%`} />
+            <MetricChip label="Gesture" value={`${toPercent(gestureConfidence)}%`} />
+            <MetricChip label="Motion" value={`${toPercent(motionScore)}%`} />
             <MetricChip label="Timer" value={formatTimer(timerSeconds)} />
             <MetricChip label="Platform" value="Win / Mac" />
           </div>
 
           <div className="support-row">
-            <InfoCard label="How to swipe" value={gestureGuide} />
+            <InfoCard label="How to gesture" value={gestureGuide} />
             <InfoCard label="Final phrase" value={lastFinalTranscript} />
             <InfoCard label="Matched" value={matchedCommandPreview} tone={matchedCommandPreview.includes("No command") ? "muted" : "good"} />
           </div>
@@ -208,7 +229,7 @@ export default function App() {
             <span>Latest</span>
             <strong>
               {latestEvent
-                ? `${latestEvent.source.toUpperCase()} · ${latestEvent.command} · ${Math.round(latestEvent.confidence * 100)}%`
+                ? `${latestEvent.source.toUpperCase()} - ${latestEvent.command} - ${toPercent(latestEvent.confidence)}%`
                 : "No command yet"}
             </strong>
           </div>
@@ -222,7 +243,7 @@ export default function App() {
                   <div className="log-meta">
                     <span>{entry.timeLabel}</span>
                     <span>{entry.source}</span>
-                    <span>{Math.round(entry.confidence * 100)}%</span>
+                    <span>{toPercent(entry.confidence)}%</span>
                   </div>
                   <strong>{entry.command}</strong>
                   <p>{entry.action}</p>
@@ -286,4 +307,12 @@ function formatTimer(totalSeconds: number) {
     .padStart(2, "0");
   const seconds = (totalSeconds % 60).toString().padStart(2, "0");
   return `${minutes}:${seconds}`;
+}
+
+function toPercent(value: number) {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+
+  return Math.round(value * 100);
 }
