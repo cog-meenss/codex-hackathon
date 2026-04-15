@@ -2,7 +2,7 @@ export const slides = [
   {
     title: "Touchless Meeting Control",
     subtitle: "Gesture, voice, and presence routed through one shared command layer.",
-    accent: "Say start, swipe to navigate, open your palm to pause or resume."
+    accent: "Say start, hold 1 or 2 fingers to navigate, or show an open palm to pause or resume."
   },
   {
     title: "Why This Matters",

@@ -78,9 +78,11 @@ Try these commands:
 
 Try these gestures:
 
-- swipe right -> next slide
-- swipe left -> previous slide
-- open palm -> pause or resume
+- hold 1 finger -> previous slide
+- hold 2 fingers -> next slide
+- hold an open palm -> pause or resume
+- quick swipe right -> next slide
+- quick swipe left -> previous slide
 
 ### Presence
 
@@ -92,8 +94,8 @@ Recommended pitch flow:
 
 1. Show the app idle with camera and voice status visible.
 2. Say `start`.
-3. Swipe right to move to the next slide.
-4. Swipe left to go back.
+3. Hold 2 fingers or swipe right to move to the next slide.
+4. Hold 1 finger or swipe left to go back.
 5. Show an open palm to pause or resume.
 6. Say `mute`.
 7. Trigger away-state.

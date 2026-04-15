@@ -77,8 +77,8 @@ export default function App() {
 
   const latestEvent = eventLog[0];
   const gestureGuide = gestureEnabled
-    ? "Show 1 finger for previous, 2 fingers for next, or an open palm for pause and resume."
-    : "Turn gesture back on to use finger-count controls.";
+    ? "Hold 1 finger for previous, hold 2 fingers for next, or hold an open palm to pause. Quick left and right swipes still work too."
+    : "Turn gesture back on to use hand-pose controls.";
 
   function dispatchManual(command: NormalizedCommand, detail: string) {
     onCommand({
@@ -151,9 +151,9 @@ export default function App() {
           <div className="gesture-guide">
             <span>Gesture guide</span>
             <div className="gesture-guide-steps">
-              <strong>1 finger = Back</strong>
-              <strong>2 fingers = Next</strong>
-              <strong>Open palm = Pause</strong>
+              <strong>Hold 1 finger = Back</strong>
+              <strong>Hold 2 fingers = Next</strong>
+              <strong>Hold palm = Pause</strong>
             </div>
             <p>{gestureGuide}</p>
             <div className="gesture-fallback-row">
